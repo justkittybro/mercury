@@ -1612,21 +1612,11 @@ local function OQMD_fake_script() -- TextButton_5.LocalScript
 
 end
 coroutine.wrap(OQMD_fake_script)()
-local function copyScriptCode(titleText, rawScript)
-    if type(rawScript) ~= "string" or rawScript == "" then
-        warn("No script source to copy for:", titleText)
-        return
-    end
+local function ZAGHLHA_fake_script() -- TextButton_6.LocalScript 
+	local script = Instance.new('LocalScript', TextButton_6)
 
-    if type(setclipboard) ~= "function" then
-        warn("Clipboard copying isn't supported in this environment.")
-        return
-    end
+	print("Hello world!")
 
-    local ok, err = pcall(setclipboard, rawScript)
-    if not ok then
-        warn("Copy failed:", err)
-    end
 end
 coroutine.wrap(ZAGHLHA_fake_script)()
 local function HLVSSV_fake_script() -- TextButton_9.LocalScript 
