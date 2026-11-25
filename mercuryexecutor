@@ -944,11 +944,13 @@ UICorner_33.Parent = TextButton_12
 
 local HttpService = game:GetService("HttpService")
 
-local searchBox = TextBox
-local cardTemplate = Frame_13
-local resultsContainer = Quickactions
-local listLayout = UIListLayout
+local mainFrame = MercuryExecutor:WaitForChild("MainFrame")
+local resultsContainer = mainFrame:WaitForChild("Quickactions")
+local searchBox = resultsContainer:FindFirstChildWhichIsA("TextBox", true)
+local cardTemplate = resultsContainer:FindFirstChild("Frame_13", true)
+local listLayout = resultsContainer:FindFirstChildWhichIsA("UIListLayout", true)
 
+resultsContainer.ZIndex = 5
 cardTemplate.Visible = false
 
 local function httpGet(url)
@@ -999,39 +1001,16 @@ local function getLoadstringText(item)
 	return ""
 end
 
-local function executeScriptText(titleText, codeText)
-	if codeText == "" then
-		warn("Error running script:", "No script code available for " .. titleText)
-		return
+local function findButtonByText(card, targetText)
+	for _, obj in ipairs(card:GetDescendants()) do
+		if obj:IsA("TextButton") then
+			local clean = obj.Text:gsub("%s+", ""):lower()
+			if clean == targetText:lower() then
+				return obj
+			end
+		end
 	end
-
-	if not loadstring then
-		warn("Error running script:", "loadstring is not available in this environment.")
-		return
-	end
-
-	local success, err = pcall(function()
-		loadstring(codeText)()
-	end)
-
-	if not success then
-		warn("Error running script:", err)
-	end
-end
-
-local function copyScriptText(titleText, codeText)
-	if codeText == "" then
-		warn("Nothing to copy for:", titleText)
-		return
-	end
-
-	if not setclipboard then
-		warn("setclipboard is not available in this environment.")
-		return
-	end
-
-	setclipboard(codeText)
-	print("Copied script to clipboard:", titleText)
+	return nil
 end
 
 local function renderSearchResults(scriptsList)
@@ -1043,7 +1022,7 @@ local function renderSearchResults(scriptsList)
 		emptyCard.Visible = true
 		emptyCard.Parent = resultsContainer
 
-		local titleLbl = emptyCard:FindFirstChildWhichIsA("TextLabel")
+		local titleLbl = emptyCard:FindFirstChildWhichIsA("TextLabel", true)
 		if titleLbl then
 			titleLbl.Text = "No scripts found"
 		end
@@ -1067,31 +1046,51 @@ local function renderSearchResults(scriptsList)
 		local titleText = item.title or "Untitled"
 		local codeText = getLoadstringText(item)
 
-		local titleLbl = card:FindFirstChildWhichIsA("TextLabel")
+		local titleLbl = card:FindFirstChildWhichIsA("TextLabel", true)
 		if titleLbl then
 			titleLbl.Text = titleText
 		end
 
-		local execBtn = card:FindFirstChild("TextButton_5")
-		local copyBtn = card:FindFirstChild("TextButton_6")
-		local viewBtn = card:FindFirstChild("TextButton_7")
+		local execBtn = findButtonByText(card, "Execute")
+		local copyBtn = findButtonByText(card, "Copy")
 
 		if execBtn then
 			execBtn.MouseButton1Click:Connect(function()
-				executeScriptText(titleText, codeText)
+				print("[MercuryHub] Execute clicked:", titleText)
+				if codeText == "" then
+					warn("Error running script: empty script payload")
+					return
+				end
+				if not loadstring then
+					warn("Error running script: loadstring unavailable")
+					return
+				end
+				local success, err = pcall(function()
+					loadstring(codeText)()
+				end)
+				if not success then
+					warn("Error running script:", err)
+				end
 			end)
+		else
+			warn("[MercuryHub] Execute button not found in card")
 		end
 
 		if copyBtn then
 			copyBtn.MouseButton1Click:Connect(function()
-				copyScriptText(titleText, codeText)
+				print("[MercuryHub] Copy clicked:", titleText)
+				if codeText == "" then
+					warn("Error copying script: empty script payload")
+					return
+				end
+				if not setclipboard then
+					warn("Error copying script: setclipboard unavailable")
+					return
+				end
+				setclipboard(codeText)
 			end)
-		end
-
-		if viewBtn then
-			viewBtn.MouseButton1Click:Connect(function()
-				-- View button reserved for later
-			end)
+		else
+			warn("[MercuryHub] Copy button not found in card")
 		end
 	end
 
@@ -1128,7 +1127,6 @@ end)
 task.spawn(function()
 	searchScriptBlox("")
 end)
-
 local function SPYRMW_fake_script() -- ImageButton.LocalScript 
 	local script = Instance.new('LocalScript', ImageButton)
 
