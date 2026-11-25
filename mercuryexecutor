@@ -942,12 +942,14 @@ UICorner_33.Parent = TextButton_12
 
 -- Scripts:
 
+-- === SCRIPTBLOX SEARCH & CARD CLONING FOR MERCURY EXECUTOR ===
 local HttpService = game:GetService("HttpService")
 
 local searchBox = TextBox
 local cardTemplate = Frame_13
 local resultsContainer = Quickactions
 
+-- Keep the template card hidden; clones will be created for each result
 cardTemplate.Visible = false
 
 local function httpGet(url)
@@ -976,6 +978,42 @@ local function clearResultCards()
 		end
 	end
 	updateCanvas()
+end
+
+local function runScriptCode(titleText, rawScript)
+	if rawScript == "" then
+		warn("No script source found for:", titleText)
+		return
+	end
+	if not loadstring then
+		warn("loadstring is not available in this environment.")
+		return
+	end
+
+	local fn, compileErr = loadstring(rawScript)
+	if not fn then
+		warn("Compile error for '" .. titleText .. "':", compileErr)
+		return
+	end
+
+	local ok, runErr = pcall(fn)
+	if not ok then
+		warn("Runtime error in '" .. titleText .. "':", runErr)
+	end
+end
+
+local function copyScriptCode(titleText, rawScript)
+	if rawScript == "" then
+		warn("No script source to copy for:", titleText)
+		return
+	end
+	if not setclipboard then
+		warn("setclipboard is not available in this environment.")
+		return
+	end
+
+	setclipboard(rawScript)
+	print("Copied script to clipboard:", titleText)
 end
 
 local function renderSearchResults(scriptsList)
@@ -1022,32 +1060,19 @@ local function renderSearchResults(scriptsList)
 
 		if execBtn then
 			execBtn.MouseButton1Click:Connect(function()
-				if rawScript == "" then
-					warn("Error running script:", "No script source for " .. titleText)
-					return
-				end
-
-				local success, err = pcall(function()
-					loadstring(rawScript)()
-				end)
-
-				if not success then
-					warn("Error running script:", err)
-				end
+				runScriptCode(titleText, rawScript)
 			end)
 		end
 
 		if copyBtn then
 			copyBtn.MouseButton1Click:Connect(function()
-				if rawScript ~= "" and setclipboard then
-					setclipboard(rawScript)
-				end
+				copyScriptCode(titleText, rawScript)
 			end)
 		end
 
 		if viewBtn then
 			viewBtn.MouseButton1Click:Connect(function()
-				-- View button reserved for later
+				-- View button will be implemented in a later step
 			end)
 		end
 	end
