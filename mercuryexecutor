@@ -942,14 +942,13 @@ UICorner_33.Parent = TextButton_12
 
 -- Scripts:
 
--- === SCRIPTBLOX SEARCH & CARD CLONING FOR MERCURY EXECUTOR ===
 local HttpService = game:GetService("HttpService")
 
 local searchBox = TextBox
 local cardTemplate = Frame_13
 local resultsContainer = Quickactions
+local listLayout = UIListLayout
 
--- Keep the template card hidden; clones will be created for each result
 cardTemplate.Visible = false
 
 local function httpGet(url)
@@ -966,10 +965,14 @@ local function urlEncode(str)
 end
 
 local function updateCanvas()
-	resultsContainer.CanvasSize = UDim2.fromOffset(0, UIListLayout.AbsoluteContentSize.Y + 16)
+	if listLayout then
+		resultsContainer.CanvasSize = UDim2.fromOffset(0, listLayout.AbsoluteContentSize.Y + 16)
+	end
 end
 
-UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
+if listLayout then
+	listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
+end
 
 local function clearResultCards()
 	for _, child in ipairs(resultsContainer:GetChildren()) do
@@ -980,39 +983,54 @@ local function clearResultCards()
 	updateCanvas()
 end
 
-local function runScriptCode(titleText, rawScript)
-	if rawScript == "" then
-		warn("No script source found for:", titleText)
+local function getLoadstringText(item)
+	if type(item.script) == "string" and item.script:match("%S") then
+		return item.script
+	end
+
+	local idOrSlug = item.slug or item._id
+	if idOrSlug then
+		return string.format(
+			'loadstring(game:HttpGet("https://scriptblox.com/raw/%s"))()',
+			tostring(idOrSlug)
+		)
+	end
+
+	return ""
+end
+
+local function executeScriptText(titleText, codeText)
+	if codeText == "" then
+		warn("Error running script:", "No script code available for " .. titleText)
 		return
 	end
+
 	if not loadstring then
-		warn("loadstring is not available in this environment.")
+		warn("Error running script:", "loadstring is not available in this environment.")
 		return
 	end
 
-	local fn, compileErr = loadstring(rawScript)
-	if not fn then
-		warn("Compile error for '" .. titleText .. "':", compileErr)
-		return
-	end
+	local success, err = pcall(function()
+		loadstring(codeText)()
+	end)
 
-	local ok, runErr = pcall(fn)
-	if not ok then
-		warn("Runtime error in '" .. titleText .. "':", runErr)
+	if not success then
+		warn("Error running script:", err)
 	end
 end
 
-local function copyScriptCode(titleText, rawScript)
-	if rawScript == "" then
-		warn("No script source to copy for:", titleText)
+local function copyScriptText(titleText, codeText)
+	if codeText == "" then
+		warn("Nothing to copy for:", titleText)
 		return
 	end
+
 	if not setclipboard then
 		warn("setclipboard is not available in this environment.")
 		return
 	end
 
-	setclipboard(rawScript)
+	setclipboard(codeText)
 	print("Copied script to clipboard:", titleText)
 end
 
@@ -1047,7 +1065,7 @@ local function renderSearchResults(scriptsList)
 		card.Parent = resultsContainer
 
 		local titleText = item.title or "Untitled"
-		local rawScript = item.script or ""
+		local codeText = getLoadstringText(item)
 
 		local titleLbl = card:FindFirstChildWhichIsA("TextLabel")
 		if titleLbl then
@@ -1060,19 +1078,19 @@ local function renderSearchResults(scriptsList)
 
 		if execBtn then
 			execBtn.MouseButton1Click:Connect(function()
-				runScriptCode(titleText, rawScript)
+				executeScriptText(titleText, codeText)
 			end)
 		end
 
 		if copyBtn then
 			copyBtn.MouseButton1Click:Connect(function()
-				copyScriptCode(titleText, rawScript)
+				copyScriptText(titleText, codeText)
 			end)
 		end
 
 		if viewBtn then
 			viewBtn.MouseButton1Click:Connect(function()
-				-- View button will be implemented in a later step
+				-- View button reserved for later
 			end)
 		end
 	end
